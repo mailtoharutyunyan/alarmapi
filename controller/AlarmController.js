@@ -1,12 +1,15 @@
 const ResponseManager = require("../manager/ResponseManager");
 const AlarmService = require('../service/AlarmService');
+const Alarm = require("../model/Alarm");
 
 class AlarmController {
     static async getAllAlarms(req, res) {
 
         const responseHandler = ResponseManager.getResponseHandler(res);
         try {
-            await AlarmService.getAllAlarms(responseHandler);
+            const alarms = await Alarm.find()
+            res.status(200).json(alarms);
+            // await AlarmService.getAllAlarms(responseHandler);
 
         } catch (e) {
             responseHandler.onError(e);
@@ -14,39 +17,62 @@ class AlarmController {
     }
 
     static async createAlarm(req, res) {
-        const responseHandler = ResponseManager.getResponseHandler(res);
+        // const responseHandler = ResponseManager.getResponseHandler(res);
+        const alarmModel = req.body;
+        const newAlarm = new Alarm({
+            hour: alarmModel.hour,
+            minute: alarmModel.minute,
+            isActive: alarmModel.isActive,
+            days: alarmModel.days
+        });
         try {
-            await AlarmService.createAlarm(req.body, responseHandler);
-
+            await newAlarm.save();
+            res.status(201).json(newAlarm);
         } catch (e) {
-            responseHandler.onError(e);
+            res.status(500).json(e);
         }
     }
 
     static async deleteAlarm(req, res) {
-        const responseHandler = ResponseManager.getResponseHandler(res);
         try {
-            await AlarmService.deleteAlarm(req.params.id, responseHandler);
+            const alarm = await Alarm.findById({_id: req.params.id})
+            res.status(200).json(alarm);
+            await Alarm.findByIdAndDelete({_id: req.params.id});
         } catch (e) {
-            responseHandler.onError(e)
+            res.status(500).json(e);
         }
     }
 
     static async getAlarmById(req, res) {
         const responseHandler = ResponseManager.getResponseHandler(res);
         try {
-            await AlarmService.getAlarmById(req.params.id, responseHandler);
+            const alarm = await Alarm.findById({_id: req.params.id})
+            if (alarm) {
+                res.status(200).json(alarm);
+            } else {
+                res.status(200).json("Alarm Not Found");
+            }
         } catch (e) {
             responseHandler.onError(e)
         }
     }
 
     static async updateAlarm(req, res) {
-        const responseHandler = ResponseManager.getResponseHandler(res);
         try {
-            await AlarmService.updateAlarmById(req.params.id, req.body, responseHandler);
+            const alarm = await Alarm.findOne({_id: req.params.id}).exec();
+            const alarmModel = req.body;
+            if (alarm) {
+                alarm.hour = alarmModel.hour
+                alarm.minute = alarmModel.minute
+                alarm.isActive = alarmModel.isActive
+                alarm.days = alarmModel.days
+                const iAlarm = await alarm.save();
+                res.status(200).json(iAlarm);
+            } else {
+                res.status(500).json("Alarm not found for update");
+            }
         } catch (e) {
-            responseHandler.onError(e)
+            res.status(500).json(e);
         }
     }
 }
